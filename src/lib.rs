@@ -14,13 +14,31 @@ pub fn start() {
     // Window Size configuration
     let window_width = 800;
     let window_height = 600;
-    const CELL_SIZE: usize = 10;
+    const CELL_SIZE: usize = 20;
     let framebuffer_width =  window_width;
     let framebuffer_height = window_height;
 
-    let rle = "18bo6bo$16b3o4b3o$15bo6bo$15b2o5b2o$3bo28b2o$4b2o28bo$2b2o27bo$4bo27b
-2o2$2bo9bo3bo$2bo9bobobobo11b3o$2bo9bo3bo2$bo28bo$2o26bobo$2o27bobo$o
-28bo$10b2o5b2o$11bo6bo$8b3o4b3o$8bo6bo!";
+    let rle = "....................O......O...........
+..................OOO....OOO...........
+.................O......O..............
+.................OO.....OO.............
+.....O............................OO...
+......OO............................O..
+....OO...........................O.....
+......O...........................OO...
+.......................................
+....O.........O...O....................
+....O.........O.O.O.O...........OOO....
+....O.........O...O....................
+.......................................
+...O............................O......
+..OO..........................O.O......
+..OO...........................O.O.....
+..O............................O.......
+............OO.....OO..................
+.............O......O..................
+..........OOO....OOO...................
+..........O......O.....................";
     
     
     let mut model = match parse_rle_body(rle){
@@ -29,7 +47,7 @@ pub fn start() {
     };
     
     // Frame Rate
-    let frame_delay = Duration::from_millis(3000);
+    let frame_delay = Duration::from_millis(100);
   
     // Window Objects initialization
     let mut framebuffer = Framebuffer::new(window_width, window_height, Color::new(0, 0, 0));
@@ -67,41 +85,35 @@ pub fn start() {
 
 pub fn parse_rle_body(rle: &str) -> Result<State, String> {
     let mut living_cells = HashSet::new();
-    let mut x = 0;
-    let mut y = 0;
 
-    let mut count = 0;
+    // Split the input string into lines
+    let lines: Vec<&str> = rle.lines().collect();
 
-    for c in rle.chars() {
-        match c {
-            'b' => {
-                // Skip 'count' dead cells
-                x += count.max(1);
-                count = 0;
-            }
-            'o' => {
-                // Add 'count' live cells
-                for _ in 0..count.max(1) {
-                    // println!("Cell at : {x}, {y}");
+    // Iterate over each line and character
+    for (y, line) in lines.iter().enumerate() {
+        for (x, char) in line.chars().enumerate() {
+            match char {
+                'O' => {
                     living_cells.insert(Cell { x, y });
-                    x += 1;
                 }
-                count = 0;
+                '.' => {
+                    // Dead cells are ignored
+                }
+                _ => {
+                    // Return an error if an invalid character is found
+                    return Err(format!("Invalid character '{}' at line {}, column {}", char, y + 1, x + 1));
+                }
             }
-            '$' => {
-                // End the row, move to the next row
-                y += 1;
-                x = 0;
-            }
-            '!' => break, // End of RLE
-            '\n' => continue, // End of RLE
-            '0'..='9' => {
-                // Accumulate count for the next cells
-                count = count * 10 + c.to_digit(10).unwrap() as usize;
-            }
-            _ => return Err(format!("Invalid character in RLE: '{}'", c)),
         }
     }
 
-    Ok(State { width: 70, height: 70, living_cells })
+    // Determine the width and height of the grid
+    let height = lines.len();
+    let width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
+
+    Ok(State {
+        width,
+        height,
+        living_cells,
+    })
 }
